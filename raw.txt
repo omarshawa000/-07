@@ -1,0 +1,364 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local active = false
+local conns = {}
+local savedMax = 100
+local isEnglish = false
+
+local function T(ar, en)
+    if isEnglish then return en else return ar end
+end
+
+-- 1. شاشة اختيار اللغة (تصميم فخم)
+local LangGui = Instance.new("ScreenGui")
+LangGui.Name = "LangSelect"
+LangGui.ResetOnSpawn = false
+LangGui.IgnoreGuiInset = true
+LangGui.DisplayOrder = 999
+LangGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local LangShade = Instance.new("Frame")
+LangShade.Size = UDim2.fromScale(1, 1)
+LangShade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LangShade.BackgroundTransparency = 0.3
+LangShade.BorderSizePixel = 0
+LangShade.Parent = LangGui
+
+local LangFrame = Instance.new("Frame")
+LangFrame.Size = UDim2.new(0, 320, 0, 220)
+LangFrame.Position = UDim2.new(0.5, -160, 0.5, -110)
+LangFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+LangFrame.BackgroundTransparency = 0.1
+LangFrame.BorderSizePixel = 0
+LangFrame.Parent = LangGui
+
+local LangCorner = Instance.new("UICorner")
+LangCorner.CornerRadius = UDim.new(0, 15)
+LangCorner.Parent = LangFrame
+
+local LangStroke = Instance.new("UIStroke")
+LangStroke.Color = Color3.fromRGB(0, 255, 0)
+LangStroke.Thickness = 4
+LangStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+LangStroke.Parent = LangFrame
+
+local LangTitle = Instance.new("TextLabel")
+LangTitle.Size = UDim2.new(1, -20, 0, 60)
+LangTitle.Position = UDim2.new(0, 10, 0, 20)
+LangTitle.BackgroundTransparency = 1
+LangTitle.Text = "قبل البدء ارجو منك ادخال اللغة"
+LangTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LangTitle.TextSize = 18
+LangTitle.Font = Enum.Font.FredokaOne
+LangTitle.TextWrapped = true
+LangTitle.Parent = LangFrame
+
+local ArBtn = Instance.new("TextButton")
+ArBtn.Size = UDim2.new(1, -40, 0, 50)
+ArBtn.Position = UDim2.new(0, 20, 0, 90)
+ArBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ArBtn.BorderSizePixel = 2
+ArBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+ArBtn.Text = "عربي🇸🇦"
+ArBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ArBtn.TextSize = 20
+ArBtn.Font = Enum.Font.FredokaOne
+ArBtn.Parent = LangFrame
+
+local ArCorner = Instance.new("UICorner")
+ArCorner.CornerRadius = UDim.new(0, 10)
+ArCorner.Parent = ArBtn
+
+local EnBtn = Instance.new("TextButton")
+EnBtn.Size = UDim2.new(1, -40, 0, 50)
+EnBtn.Position = UDim2.new(0, 20, 0, 150)
+EnBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+EnBtn.BorderSizePixel = 2
+EnBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+EnBtn.Text = "English🇬🇧"
+EnBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EnBtn.TextSize = 20
+EnBtn.Font = Enum.Font.FredokaOne
+EnBtn.Parent = LangFrame
+
+local EnCorner = Instance.new("UICorner")
+EnCorner.CornerRadius = UDim.new(0, 10)
+EnCorner.Parent = EnBtn
+
+-- 2. شاشة التحميل
+local LoadGui = Instance.new("ScreenGui")
+LoadGui.Name = "LoadScreen"
+LoadGui.ResetOnSpawn = false
+LoadGui.IgnoreGuiInset = true
+LoadGui.DisplayOrder = 1000
+LoadGui.Enabled = false
+LoadGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local LoadShade = Instance.new("Frame")
+LoadShade.Size = UDim2.fromScale(1, 1)
+LoadShade.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+LoadShade.BackgroundTransparency = 0.2
+LoadShade.BorderSizePixel = 0
+LoadShade.Parent = LoadGui
+
+local LoadText = Instance.new("TextLabel")
+LoadText.Size = UDim2.new(1, 0, 0, 50)
+LoadText.Position = UDim2.new(0, 0, 0.45, 0)
+LoadText.BackgroundTransparency = 1
+LoadText.Text = "انتظر قليلا"
+LoadText.TextColor3 = Color3.fromRGB(0, 255, 0)
+LoadText.TextSize = 28
+LoadText.Font = Enum.Font.FredokaOne
+LoadText.Parent = LoadShade
+
+local DotsText = Instance.new("TextLabel")
+DotsText.Size = UDim2.new(1, 0, 0, 50)
+DotsText.Position = UDim2.new(0, 0, 0.52, 0)
+DotsText.BackgroundTransparency = 1
+DotsText.Text = "..."
+DotsText.TextColor3 = Color3.fromRGB(255, 255, 255)
+DotsText.TextSize = 40
+DotsText.Font = Enum.Font.FredokaOne
+DotsText.Parent = LoadShade
+
+task.spawn(function()
+    while LoadGui.Parent do
+        if LoadGui.Enabled then
+            DotsText.Text = "." task.wait(0.3)
+            DotsText.Text = ".." task.wait(0.3)
+            DotsText.Text = "..." task.wait(0.3)
+        else task.wait(0.1) end
+    end
+end)
+
+local function startLoading(lang)
+    isEnglish = (lang == "en")
+    TweenService:Create(LangFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.4)
+    LangGui:Destroy()
+    
+    LoadGui.Enabled = true
+    LoadText.Text = T("انتظر قليلا", "Please wait a moment")
+    task.wait(5)
+    
+    TweenService:Create(LoadShade, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(LoadText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(DotsText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    task.wait(0.5)
+    LoadGui:Destroy()
+    createMainUI()
+end
+
+ArBtn.MouseButton1Click:Connect(function() startLoading("ar") end)
+EnBtn.MouseButton1Click:Connect(function() startLoading("en") end)
+
+-- 3. الواجهة الرئيسية (تصميم خرافي)
+function createMainUI()
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "UltimateObbyGod"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local WelcomeFrame = Instance.new("Frame")
+    WelcomeFrame.Size = UDim2.new(0, 300, 0, 80)
+    WelcomeFrame.Position = UDim2.new(1, 20, 1, -100)
+    WelcomeFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    WelcomeFrame.BackgroundTransparency = 0.1
+    WelcomeFrame.BorderSizePixel = 2
+    WelcomeFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    WelcomeFrame.Parent = ScreenGui
+
+    local WelcomeCorner = Instance.new("UICorner")
+    WelcomeCorner.CornerRadius = UDim.new(0, 10)
+    WelcomeCorner.Parent = WelcomeFrame
+
+    local WelcomeTitle = Instance.new("TextLabel")
+    WelcomeTitle.Size = UDim2.new(1, 0, 0, 35)
+    WelcomeTitle.Position = UDim2.new(0, 0, 0, 5)
+    WelcomeTitle.BackgroundTransparency = 1
+    WelcomeTitle.Text = T("مرحبا بك💚", "Welcome💚")
+    WelcomeTitle.TextColor3 = Color3.fromRGB(0, 255, 0)
+    WelcomeTitle.TextSize = 20
+    WelcomeTitle.Font = Enum.Font.FredokaOne
+    WelcomeTitle.Parent = WelcomeFrame
+
+    local WelcomeSub = Instance.new("TextLabel")
+    WelcomeSub.Size = UDim2.new(1, -10, 0, 30)
+    WelcomeSub.Position = UDim2.new(0, 5, 0, 40)
+    WelcomeSub.BackgroundTransparency = 1
+    WelcomeSub.Text = T("السكربت يمنعك من الموت، استمتع", "The script prevents death, enjoy")
+    WelcomeSub.TextColor3 = Color3.fromRGB(200, 200, 200)
+    WelcomeSub.TextSize = 14
+    WelcomeSub.Font = Enum.Font.FredokaOne
+    WelcomeSub.TextWrapped = true
+    WelcomeSub.Parent = WelcomeFrame
+
+    TweenService:Create(WelcomeFrame, TweenInfo.new(0.8, Enum.EasingStyle.Back), {Position = UDim2.new(1, -320, 1, -100)}):Play()
+    task.wait(4)
+    TweenService:Create(WelcomeFrame, TweenInfo.new(0.8, Enum.EasingStyle.Back), {Position = UDim2.new(1, 20, 1, -100)}):Play()
+    task.delay(0.8, function() WelcomeFrame:Destroy() end)
+
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Size = UDim2.new(0, 260, 0, 160)
+    MainFrame.Position = UDim2.new(0.5, -130, 0.5, -80)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+    MainFrame.BackgroundTransparency = 0.1
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true
+    MainFrame.Parent = ScreenGui
+
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 15)
+    MainCorner.Parent = MainFrame
+
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = Color3.fromRGB(0, 255, 0)
+    MainStroke.Thickness = 3
+    MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    MainStroke.Parent = MainFrame
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, 0, 0, 40)
+    Title.BackgroundTransparency = 1
+    Title.Text = T("🛡️ مضاد للموت", "🛡️ Anti-Death")
+    Title.TextColor3 = Color3.fromRGB(0, 255, 0)
+    Title.TextSize = 22
+    Title.Font = Enum.Font.FredokaOne
+    Title.Parent = MainFrame
+
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -40, 0, 50)
+    Btn.Position = UDim2.new(0, 20, 0, 60)
+    Btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Btn.BorderSizePixel = 2
+    Btn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    Btn.Text = T("✅ تشغيل", "✅ Enable")
+    Btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+    Btn.TextSize = 18
+    Btn.Font = Enum.Font.FredokaOne
+    Btn.Parent = MainFrame
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 10)
+    BtnCorner.Parent = Btn
+
+    local Status = Instance.new("TextLabel")
+    Status.Size = UDim2.new(1, -20, 0, 25)
+    Status.Position = UDim2.new(0, 10, 1, -35)
+    Status.BackgroundTransparency = 1
+    Status.Text = T("الحالة: معطل", "Status: Disabled")
+    Status.TextColor3 = Color3.fromRGB(255, 0, 0)
+    Status.TextSize = 14
+    Status.Font = Enum.Font.FredokaOne
+    Status.TextXAlignment = Enum.TextXAlignment.Center
+    Status.Parent = MainFrame
+
+    local function clearConns()
+        for _, c in ipairs(conns) do
+            pcall(function() c:Disconnect() end)
+        end
+        conns = {}
+    end
+
+    local function protectCharacter(char)
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+
+        savedMax = hum.MaxHealth
+        hum.MaxHealth = math.huge
+        hum.Health = math.huge
+        hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        hum.BreakJointsOnDeath = false
+
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanTouch = false end
+        end
+
+        table.insert(conns, char.DescendantAdded:Connect(function(obj)
+            if active and obj:IsA("BasePart") then obj.CanTouch = false end
+        end))
+        table.insert(conns, hum.HealthChanged:Connect(function(h)
+            if active and h < math.huge then hum.Health = math.huge end
+        end))
+        table.insert(conns, hum.Died:Connect(function()
+            if active then
+                task.wait(0.01)
+                pcall(function() LocalPlayer:LoadCharacter() end)
+            end
+        end))
+    end
+
+    local function applyGod()
+        clearConns()
+        local char = LocalPlayer.Character
+        if char then protectCharacter(char) end
+        table.insert(conns, LocalPlayer.CharacterAdded:Connect(function(newChar)
+            wait(0.1)
+            if active then protectCharacter(newChar) end
+        end))
+        table.insert(conns, RunService.Heartbeat:Connect(function()
+            if not active then return end
+            local c = LocalPlayer.Character
+            if not c then return end
+            local h = c:FindFirstChildOfClass("Humanoid")
+            if h then
+                h.Health = math.huge
+                h.MaxHealth = math.huge
+                h:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                h.BreakJointsOnDeath = false
+            end
+            for _, part in ipairs(c:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanTouch = false end
+            end
+        end))
+    end
+
+    local function removeGod()
+        clearConns()
+        local char = LocalPlayer.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.MaxHealth = savedMax > 0 and savedMax or 100
+                hum.Health = hum.MaxHealth
+                hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
+                hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+                hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+                hum.BreakJointsOnDeath = true
+            end
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanTouch = true end
+            end
+        end
+    end
+
+    Btn.MouseButton1Click:Connect(function()
+        active = not active
+        if active then
+            applyGod()
+            Btn.Text = T("❌ إيقاف", "❌ Disable")
+            Btn.BorderColor3 = Color3.fromRGB(255, 0, 0)
+            Btn.TextColor3 = Color3.fromRGB(255, 0, 0)
+            Status.Text = T("الحالة: مفعل", "Status: Enabled")
+            Status.TextColor3 = Color3.fromRGB(0, 255, 0)
+            TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(255, 0, 0)}):Play()
+        else
+            removeGod()
+            Btn.Text = T("✅ تشغيل", "✅ Enable")
+            Btn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+            Btn.TextColor3 = Color3.fromRGB(0, 255, 0)
+            Status.Text = T("الحالة: معطل", "Status: Disabled")
+            Status.TextColor3 = Color3.fromRGB(255, 0, 0)
+            TweenService:Create(MainStroke, TweenInfo.new(0.3), {Color = Color3.fromRGB(0, 255, 0)}):Play()
+        end
+    end)
+end
